@@ -1,0 +1,3 @@
+# Crypto art galleries and smart contracts
+This repository contains code and data that were used for an Amsterdam University College bachelor's thesis. The subject of the thesis are crypto art galleries and their business model. It was investigated how revenue is gained by 4 crypto galleries: SuperRare, Async Art, Makers Place and Foundation. Data was collected by querying publicly available data on financial transactions from the Ethereum blockchain through etherscan. The repository is divided into 3 folders. Mining contains the code that was used to retrieve the financial data for the 4 galleries. Data contains the collected and processed data in csv files. Analysis contains code for processing the data and presenting the results.
+## Mining
