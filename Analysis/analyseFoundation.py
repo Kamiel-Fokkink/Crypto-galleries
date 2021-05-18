@@ -9,12 +9,16 @@ import pandas as pd
 df = pd.read_csv("../Data/Raw/FoundationTransactions.csv")
 dfInt = pd.read_csv("../Data/Raw/FoundationInternalTransactions.csv")
 
-def collectInternalTxs(df,dfInt):    
+"""For Foundation there were only records for primary sales. This is because
+secondary sales are not handled by the known Foundation contracts, but instead
+happen through OpenSea, a third party marketplace."""
+
+def collectInternalTxs(df,dfInt):
+    """Make a dictionary with as key the transaction hash, and as value a list
+    of internal transactions that belong together."""
+
     out = dict()
-    i = 0
     for index, row in df.iterrows():
-        if (i%1000==0): print(i)
-        i += 1
         txHash = row[2]
         match = dfInt[dfInt["txHash"]==txHash]
         if (match.shape[0]==2):
@@ -22,6 +26,9 @@ def collectInternalTxs(df,dfInt):
     return out
 
 def findFeesPrimary(txdict,df):
+    """For all sales, compute the sale price and commission fees that went to
+    each party involved. Store in a dataframe."""
+
     cols = ["galleryFee","artistFee","sale","timestamp"]
     out = pd.DataFrame(columns=cols)
     i = 0
@@ -40,11 +47,12 @@ def findFeesPrimary(txdict,df):
             values = sorted(values)[1:]
             values.append(values[0] + values[1])
             values.append(v[0][1])
-            out = out.append(pd.DataFrame([values],columns=cols),ignore_index=True)    
+            out = out.append(pd.DataFrame([values],columns=cols),ignore_index=True)
     return out
 
 def processFeesPrimary(values):
+    """Compute percentage fees and store as csv"""
+
     values["galleryPerc"] = values.apply(lambda row: row["galleryFee"]*100/row["sale"],axis=1)
     values["artistPerc"] = values.apply(lambda row: row["artistFee"]*100/row["sale"],axis=1)
     values.to_csv("../Data/Processed/FoundationPrimary.csv",index=False)
-    #return values

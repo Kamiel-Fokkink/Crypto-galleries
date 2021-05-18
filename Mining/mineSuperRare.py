@@ -1,5 +1,5 @@
 #file: mineSuperRare.py
-#author: Kamiel Fokkink 
+#author: Kamiel Fokkink
 
 #This file serves to mine the ethereum database for all relevant data from
 #the SuperRare gallery
@@ -43,7 +43,7 @@ SetRoyaltyFee = "0x3e4086e5" #int percentage
 WhitelistCreator = "0x62f11dd2" #address creator
 SalePriceSet3 = "0x053992c5" #int tokenID, int saleprice
 Transfer = "0xa9059cbb" #address to, int tokenID
-Bid3 = "0x454a2ab3" #int tokenID 
+Bid3 = "0x454a2ab3" #int tokenID
 Buy3 = "0xd96a094a" #int tokenID
 AddNewTokenWithEditions = "0x019871e9" #string uri, int editions, int saleprice
 CancelBid3 = "0x9703ef35" #int tokenID
@@ -62,46 +62,50 @@ AcceptBid5 = "0x955a5a76" #address originContract, int tokenID
 Buy5 = "0xcce7ec13" #address to, int amount
 
 RelevantSRTransactionTypes = list([AcceptBid2,Buy2,SetRoyaltyFee,Transfer,AcceptBid3,
-                                   Buy3])#,AcceptBid5,Buy5])
+                                   Buy3])
 TransactionTypes = {"0x955a5a76":"AcceptBid2","0xcce7ec13":"Buy2",
                     "0x3e4086e5":"SetRoyaltyFee","0xa9059cbb":"Transfer",
                     "0x2b1fd58a":"AcceptBid3","0xd96a094a":"Buy3"}
-                    #,"0x955a5a76":"AcceptBid5","0xcce7ec13":"Buy5"}
 
 def collectSuperRareTransactions(addr):
+    """For one contract addresses, find the history of all transactions from the
+    beginning until the present. Return as a pandas dataframe"""
+
     startblock = 4500000 #Block before start of SuperRare
     endblock = 12500000 #Block after now
     blockstep = 150000
     df = pd.DataFrame(columns=columnNames)
     while (startblock < endblock):
-        result = query("account","txlist",address=addr,startblock=str(startblock), 
+        result = query("account","txlist",address=addr,startblock=str(startblock),
                        endblock=str(startblock+blockstep))
         startblock = startblock + blockstep
-        if (len(result["result"])==0): 
+        if (len(result["result"])==0):
             continue
-        elif (len(result["result"])>9999): 
+        elif (len(result["result"])>9999):
             print("Too large block step, missed some transactions")
         else:
             df = df.append(pd.DataFrame(result["result"]),sort=False)
-    return df        
-    
+    return df
+
 def writeAllSuperRareTransactions():
+    """Collect all transactions for each of the 5 SuperRare contracts. Those
+    that are relevant get put into a dataframe, and saved into a csv file.
+    Because contract 5 has the same methodIDs as contract 2, the transaction types
+    are updated in between."""
+
     df = collectSuperRareTransactions(SuperRare1)
     df = df.append(collectSuperRareTransactions(SuperRare2))
     df = df.append(collectSuperRareTransactions(SuperRare3))
-    
+
     outDf = pd.DataFrame(columns=columnNames+["type"])
-    #i=0
     for index, row in df.iterrows():
         method = row[13][0:10]
-        #i += 1
-        #if ((i % 1000)==0): print(i)
         if (method in RelevantSRTransactionTypes):
             series = row.append(pd.Series(data=[TransactionTypes[method]],index=["type"]))
             outDf = outDf.append(series,ignore_index=True)
         else:
             continue
-        
+
     TransactionTypes["0x955a5a76"] = "AcceptBid5"
     TransactionTypes["0xcce7ec13"] = "Buy5"
     df2 = collectSuperRareTransactions(SuperRare4)
@@ -116,16 +120,13 @@ def writeAllSuperRareTransactions():
     outDf.to_csv("../Data/Raw/SuperRareTransactions.csv",index=False)
 
 def writeAllSuperRareInternalTransactions():
+    """For all the regular transactions collected in the previous step, a list of
+    internal transactions associated to it are retrieved, and saved to a csv file."""
+
     inDf = pd.read_csv("../Data/Raw/SuperRareTransactions.csv")
     internalTransactionTypes = ["AcceptBid5","Buy5","AcceptBid3","Buy3","AcceptBid2","Buy2"]
     outDf = pd.DataFrame(columns=internalColumns+["txType","txHash"])
-    i=0
     for index, row in inDf.iterrows():
-        i += 1
-        if (i<4000): continue
-        if ((i%1000)==0): 
-            print(i)
-            outDf.to_csv("../Data/Raw/SuperRareInternalTransactions.csv",index=False)
         if (row[18] in internalTransactionTypes):
             try:
                 result = query("account","txlistinternal",txhash=row[2])
@@ -138,4 +139,4 @@ def writeAllSuperRareInternalTransactions():
                 continue
         else:
             continue
-    outDf.to_csv("../Data/Raw/SuperRareInternalTransactions.csv",index=False)  
+    outDf.to_csv("../Data/Raw/SuperRareInternalTransactions.csv",index=False)

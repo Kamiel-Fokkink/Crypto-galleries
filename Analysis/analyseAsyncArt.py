@@ -9,13 +9,14 @@ import pandas as pd
 df = pd.read_csv("../Data/Raw/AsyncArtTransactions.csv")
 dfInt = pd.read_csv("../Data/Raw/AsyncArtInternalTransactions.csv")
 
-def collectInternalTxs(df,dfInt):    
+def collectInternalTxs(df,dfInt):
     """For all transactions, classify them into the primary or secondary market
     based on the amount of internal transactions. One with 2 internal transactions
-    corresponds to a primary sale, more is a secondary. Also record the tokenIDs
-    of artworks when they get sold, to check which tokens are in the secondary
-    market."""
-    
+    corresponds to a primary sale, more internal transactions might be a
+    secondary sale (or in a few cases a different option). Also record the
+    tokenIDs of artworks when they get sold, to check which tokens are
+    available for the secondary market."""
+
     outPrim = dict()
     outSec = dict()
     soldIDs = set()
@@ -32,7 +33,7 @@ def collectInternalTxs(df,dfInt):
 def findFeesPrimary(txdict,df):
     """Find the values of the transactions associated to a primary sale. There
     is one gallery fee, and an artist fee."""
-    
+
     cols = ["galleryFee","artistFee","sale","timestamp"]
     out = pd.DataFrame(columns=cols)
     for k, v in txdict.items():
@@ -48,24 +49,27 @@ def findFeesPrimary(txdict,df):
             values = sorted(values)[1:]
             values.append(values[0]+values[1])
             values.append(v[0][1])
-            out = out.append(pd.DataFrame([values],columns=cols),ignore_index=True)    
+            out = out.append(pd.DataFrame([values],columns=cols),ignore_index=True)
     return out
 
 def processFeesPrimary(values):
+    """Compute percentage fees and store as csv"""
+
     values["galleryPerc"] = values.apply(lambda row: row["galleryFee"]*100/row["sale"],axis=1)
     values["artistPerc"] = values.apply(lambda row: row["artistFee"]*100/row["sale"],axis=1)
     values.to_csv("../Data/Processed/AsyncArtPrimary.csv",index=False)
-    #return values
-    
+
 def findFeesSecondary(txdict,df,soldIDs):
     """Find the values of fees associated with secondary sales. First check
-    whether a sale is indeed on the secondary market, then extract fees."""
-    
+    whether a sale is indeed on the secondary market, which is the case when the
+    tokenID has already been sold once. Then extract fees for gallery, artist
+    and seller."""
+
     cols = ["galleryFee","artistFee","sellerFee","sale","timestamp"]
     out = pd.DataFrame(columns=cols)
     for k,v in txdict.items():
-        if (not (df[df["hash"]==v[0][13]]["input"].values[0][10:74] in soldIDs)): 
-        #Remove transactions whose tokenID has not been sold yet, and thus are 
+        if (not (df[df["hash"]==v[0][13]]["input"].values[0][10:74] in soldIDs)):
+        #Remove transactions whose tokenID has not been sold yet, and thus are
         #wrongly classified as secondary
             continue
         if len(v)==3:
@@ -79,6 +83,8 @@ def findFeesSecondary(txdict,df,soldIDs):
     return out
 
 def processFeesSecondary(values):
+    """Compute percentage fees and store as csv"""
+
     values["galleryPerc"] = values.apply(lambda row: row["galleryFee"]*100/row["sale"],axis=1)
     values["artistPerc"] = values.apply(lambda row: row["artistFee"]*100/row["sale"],axis=1)
     values["sellerPerc"] = values.apply(lambda row: row["sellerFee"]*100/row["sale"],axis=1)

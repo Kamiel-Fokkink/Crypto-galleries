@@ -12,11 +12,11 @@ dfInt = pd.read_csv("../Data/Raw/SuperRareInternalTransactions.csv")
 def collectInternalTxs(df,dfInt):
     """This function connects regular transactions that are associated to
     internal transactions together. It distinguishes between those that have
-    2 or 3 internal transactions, as the latter concerns resales. It will 
-    output a dictionary, with as keys the transaction hash of regular 
-    transactions, and as values a list of lists containing details of the 
+    2 or 3 internal transactions, as the latter concerns resales. It will
+    output a dictionary, with as keys the transaction hash of regular
+    transactions, and as values a list of lists containing details of the
     internal transactions."""
-    
+
     outPrim = dict()
     outSec = dict()
     for index, row in df.iterrows():
@@ -32,7 +32,7 @@ def findFeesPrimary(txdict,df):
     """For all primary sales, it checks whether their data corresponds to a
     valid transaction with a gallery fee and artist fee. Then stores the
     values in a dataframe."""
-    
+
     cols = ["galleryFee","artistFee","sale","timestamp"]
     out = pd.DataFrame(columns=cols)
     for k, v in txdict.items():
@@ -42,7 +42,7 @@ def findFeesPrimary(txdict,df):
         values = [value/(10**18)]
         for row in v:
             values.append(int(row[4])/(10**18))
-        
+
         if (values[0]!=0):
             values = sorted(values)
             values.append(v[0][1])
@@ -53,14 +53,15 @@ def findFeesPrimary(txdict,df):
             values.append(values[0] + values[1])
             values.append(v[0][1])
             out = out.append(pd.DataFrame([values],columns=cols),
-                             ignore_index=True)    
+                             ignore_index=True)
     return out
 
 def processFeesPrimary(values):
+    """Compute percentage fees and store as csv"""
+
     values["galleryPerc"] = values.apply(lambda row: row["galleryFee"]*100/row["sale"],axis=1)
     values["artistPerc"] = values.apply(lambda row: row["artistFee"]*100/row["sale"],axis=1)
     values.to_csv("../Data/Processed/SuperRarePrimary.csv",index=False)
-    #return values
 
 def findFeesSecondary(txdict,df):
     """For all secondary sales, it checks whether their data corresponds to a
@@ -69,7 +70,7 @@ def findFeesSecondary(txdict,df):
     3 pairs of 2 transactions, where money is handled in two steps through a
     middle contract, in the end reaching 3 receivers. Stores the amounts
     of transferred money in a dataframe."""
-    
+
     cols = ["galleryFee","artistFee","sellerFee","sale","timestamp"]
     out = pd.DataFrame(columns=cols)
     for k,v in txdict.items():
@@ -83,11 +84,11 @@ def findFeesSecondary(txdict,df):
             if (txVal > 0 and txVal < sum(values)):
                 #These transactions return a previously placed bid
                 continue
-            values.append(sum(values))
-            series = sorted(values)
             if (not len(receivers)==3):
                 #These transactions transfer money to SuperRare multiple times
                 continue
+            values.append(sum(values))
+            series = sorted(values)
             series.append(v[0][1])
             out = out.append(pd.DataFrame([series],columns=cols),ignore_index=True)
         elif len(v)==6:
@@ -99,11 +100,11 @@ def findFeesSecondary(txdict,df):
             if (txVal > 0 and txVal < sum(values)):
                 #These transactions return a previously placed bid
                 continue
-            values.add(sum(values))
-            series = sorted(list(values))
             if (not len(receivers)==4):
                 #These transactions transfer money to SuperRare multiple times
                 continue
+            values.add(sum(values))
+            series = sorted(list(values))
             series.append(v[0][1])
             out = out.append(pd.DataFrame([series],columns=cols),ignore_index=True)
         else:
@@ -111,13 +112,18 @@ def findFeesSecondary(txdict,df):
     return out
 
 def processFeesSecondary(values):
+    """Compute percentage fees and store as csv"""
+
     values["galleryPerc"] = values.apply(lambda row: row["galleryFee"]*100/row["sale"],axis=1)
     values["artistPerc"] = values.apply(lambda row: row["artistFee"]*100/row["sale"],axis=1)
     values["sellerPerc"] = values.apply(lambda row: row["sellerFee"]*100/row["sale"],axis=1)
     values.to_csv("../Data/Processed/SuperRareSecondary.csv",index=False)
-    #return values
 
 def countOutliers(df):
+    """Helper function to determine whether there are many outliers in the data.
+    These are considered as datapoints which deviate more than 1 std deviation
+    from the mean."""
+
     outliersG = 0
     outliersA = 0
     outliersS = 0
@@ -137,4 +143,4 @@ def countOutliers(df):
         if ((row["sellerPerc"]-meanS)>stdS):
             outliersS += 1
     out = {"G":outliersG,"A":outliersA,"S":outliersS}
-    return out, timestamps        
+    return out

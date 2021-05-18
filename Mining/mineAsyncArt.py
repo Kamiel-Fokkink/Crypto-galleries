@@ -2,7 +2,7 @@
 #author: Kamiel Fokkink
 
 #This file serves to mine the ethereum database for all relevant data from
-#the AsyncArt gallery
+#the Async Art gallery
 
 from query import *
 import pandas as pd
@@ -48,16 +48,19 @@ AATransactionTypes = {"0x2b1fd58a":"acceptBid1","0x23b872dd":"transferFrom",
                       "0x02e9d5e4":"acceptBid2","0x2d4fbf83":"takeBuyPrice",
                       "0xa9059cbb":"transfer"}
 
-
 def writeAsyncArtTransactions():
+    """For the two contract addresses, collect the history of all transactions.
+    If they are relevant, associated to a sale, put into a dataframe and save
+    those as csv."""
+
     df = pd.DataFrame(columns=columnNames)
-    
+
     result1 = query("account","txlist",address=AsyncArt1)
     df = df.append(pd.DataFrame(result1["result"]),sort=False)
-    
+
     result2 = query("account","txlist",address=AsyncArt2)
     df = df.append(pd.DataFrame(result2["result"]),sort=False)
-    
+
     outDf = pd.DataFrame(columns=columnNames+["type"])
     for index, row in df.iterrows():
         method = row[13][0:10]
@@ -67,24 +70,21 @@ def writeAsyncArtTransactions():
         else:
             continue
     outDf.to_csv("../Data/Raw/AsyncArtTransactions.csv",index=False)
-    
+
 def writeAsyncArtInternalTransactions():
+    """For all previously found transactions, collect the internal transactions
+    associated to them, and save in a csv file."""
+
     inDf = pd.read_csv("AsyncArtTransactions.csv")
     internalTransactionTypes = ["acceptBid1","takeBuyPrice","acceptBid2"]
     outDf = pd.DataFrame(columns=internalColumns +["txType","txHash"])
-    i=0
     for index, row in inDf.iterrows():
-        i += 1
-        if ((i%100)==0): 
-            print(i)
-            #print(row[17])
         if (row[18] in internalTransactionTypes):
             result = query("account","txlistinternal",txhash=row[2])
             for res in result["result"]:
-                
                 series = pd.DataFrame(data=[list(res.values()) + ([row[18],row[2]])],
                                             columns=internalColumns +["txType","txHash"])
                 outDf = outDf.append(series,ignore_index=True)
         else:
             continue
-    outDf.to_csv("../Data/Raw/AsyncArtInternalTransactions.csv",index=False)  
+    outDf.to_csv("../Data/Raw/AsyncArtInternalTransactions.csv",index=False)

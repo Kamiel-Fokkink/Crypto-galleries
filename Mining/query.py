@@ -19,6 +19,10 @@ internalColumns=["blockNumber","timeStamp","from","to","value","contractAddress"
 
 def query(module, action, address="", tags="",startblock="",endblock="",
           page="",offset="",txhash=""):
+    """Formulate an etherscan query by taking a list of input parameters, many of
+    them optional. It puts them in correct order, connects with my ApiKey, and
+    retrieves the results. A nested dictionary structure is returned."""
+
     url = "https://api.etherscan.io/api?"
     url += "module=" + module
     url += "&action=" + action
@@ -30,16 +34,16 @@ def query(module, action, address="", tags="",startblock="",endblock="",
     if (offset!=""): url += "&offset=" + offset
     if (txhash!=""): url += "&txhash=" + txhash
     url += "&apikey=" + MyApiKey
-    #print(url)
     req = requests.get(url)
     dic = json.loads(req.text) #Convert string into nested dictionaries
     return dic
 
 def uniqueMethodIDs(df):
     """Given a dataframe of transactions, this function finds the different
-    methodIDs that are present among the transaction. It is used as a helper 
+    methodIDs that are present among the transaction. It is used as a helper
     to determine the kinds of transaction that the contracts handle. Through
     manually looking the transactions up on etherscan, the methods can be found."""
+    
     ids = set()
     i = 0
     for index, row in df.iterrows():
