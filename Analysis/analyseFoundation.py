@@ -31,10 +31,7 @@ def findFeesPrimary(txdict,df):
 
     cols = ["galleryFee","artistFee","sale","timestamp"]
     out = pd.DataFrame(columns=cols)
-    i = 0
     for k, v in txdict.items():
-        if (i%500==0): print(i)
-        i += 1
         value = int(df[df["hash"]==k]["value"])
         values = [value/(10**18)]
         for row in v:
@@ -53,6 +50,6 @@ def findFeesPrimary(txdict,df):
 def processFeesPrimary(values):
     """Compute percentage fees and store as csv"""
 
-    values["galleryPerc"] = values.apply(lambda row: row["galleryFee"]*100/row["sale"],axis=1)
-    values["artistPerc"] = values.apply(lambda row: row["artistFee"]*100/row["sale"],axis=1)
+    values["galleryPerc"] = values.apply(lambda row: round(row["galleryFee"]*100/row["sale"],2),axis=1)
+    values["artistPerc"] = values.apply(lambda row: round(row["artistFee"]*100/row["sale"],2),axis=1)
     values.to_csv("../Data/Processed/FoundationPrimary.csv",index=False)
